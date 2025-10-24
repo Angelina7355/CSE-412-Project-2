@@ -74,11 +74,6 @@ class ReflexAgent(Agent):
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
         "*** YOUR CODE HERE ***"
-        # print(f'Successor Game State: {successorGameState}')
-        # print(f'New Position: {newPos}')
-        # print(f'New Food: {newFood}')
-        # print(f'New Ghost States: {newGhostStates}')
-        # print(f'New Scared Times: {newScaredTimes}\n')
         score = successorGameState.getScore()
         foodList = newFood.asList()
         if foodList:
@@ -99,10 +94,6 @@ class ReflexAgent(Agent):
         # Closer to Food is GOOD (so subtract from score)
         # Closer to Ghost is BAD (so add to score)
         score += -minFood2PacDist + minGhost2PacDist
-
-
-        # score = successorGameState.getScore()
-
         return score
 
 def scoreEvaluationFunction(currentGameState):
