@@ -173,6 +173,23 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
     """
+    """
+        gameState.getLegalActions(agentIndex):
+        Returns a list of legal actions for an agent
+        agentIndex=0 means Pacman, ghosts are >= 1
+
+        gameState.generateSuccessor(agentIndex, action):
+        Returns the successor game state after an agent takes an action
+
+        gameState.getNumAgents():
+        Returns the total number of agents in the game
+
+        gameState.isWin():
+        Returns whether or not the game state is a winning state
+
+        gameState.isLose():
+        Returns whether or not the game state is a losing state
+        """
 
     def getAction(self, gameState):
         """
@@ -182,17 +199,135 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # Collect legal moves for Pacman
+        legalMoves = gameState.getLegalActions(0)
+
+        # Call expectimax function to generate scores of every successor and 
+        # return the score for the best expectimax path
+        scores = [
+            self.expectimax(gameState.generateSuccessor(0, action), 1, 0) 
+            for action in legalMoves
+        ]
+        bestScore = max(scores)
+        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+
+        return legalMoves[chosenIndex]
+    
+
+    def expectimax(self, state, agentIndex, depth):
+        # Base Case (reaching bottom of tree)
+        if (state.isWin() or state.isLose() or depth == self.depth):
+            return self.evaluationFunction(state)
+        
+        numAgents = state.getNumAgents()
+        legalMoves = state.getLegalActions(agentIndex)
+
+        # Base Case (when there are no legal moves)
+        if not legalMoves:
+            return self.evaluationFunction(state)
+    
+        # Pacman's Turn (Max Node)
+        if (agentIndex == 0):
+            return max(
+                self.expectimax(state.generateSuccessor(agentIndex, action), 1, depth) 
+                for action in legalMoves)
+
+        # Ghost's turn (Chance Node)
+        else:
+            # Loop through all agents until a base case is reached
+            nextAgentIndex = (agentIndex + 1) % numAgents
+
+            # Only increase depth when Pacman is the next agent b/c the depth 
+            # can only increase once Pacman and all other ghosts have taken a turn
+            nextDepth = depth + 1 if nextAgentIndex == 0 else depth
+
+            # expectimax requires that all scores for the ghosts legal moves must
+            # be averaged (because the ghosts use chance nodes)
+            return sum(
+                self.expectimax(state.generateSuccessor(agentIndex, action), nextAgentIndex, nextDepth) 
+                for action in legalMoves
+                ) / len(legalMoves) 
+            
+
+
+
 
 def betterEvaluationFunction(currentGameState):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: This evaluation function considers the locations of the food, 
+    capsules, ghosts, and whether the state is a win or lose state. The manhattan 
+    distance is used to calculate the scores of all distance comparisons. The 
+    distance from both the food and capsules to Pacman are each subtracted from the 
+    overall score to reflect the idea that the closest food/capsule will result in 
+    the score decreasing the least. Similarly, the pacman to ghost distance is added
+    to the overall score since the closest ghost is going to add the smallest distance
+    to the score, however when the ghosts are in a scared state, the calculated distance 
+    becomes negative so that it is subtracted from the overall score, encouraging 
+    Pacman to move toward the ghosts eat them. Additionally, the current state's win or lose
+    conditions are considered so that a very large value is added to the score to
+    motivate the Pacman to move toward a winning state versus the losing state 
+    subtracting a large amount from the score, discouraging the Pacman from moving 
+    toward a losing state. Lastly, when the distance between the Pacman and 
+    food/capsules is significantly smaller than the distance between the Pacman and 
+    the closest ghost, a positive weight is added to the food/capsule scores to encourage 
+    Pacman to prioritize moving toward the nearest food/capsule rather than moving away 
+    from the nearest ghost.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    state = currentGameState
+    score = state.getScore()
+    foodList = state.getFood().asList()
+    pacPos = state.getPacmanPosition()
+    ghostStates = state.getGhostStates()
+    ghostPositions = state.getGhostPositions()
+    scaredTimes = [ghostState.scaredTimer for ghostState in ghostStates]
+    capsulePositions = state.getCapsules()
+
+    # Score contribution for food positions
+    if foodList:
+        minFood2PacDist = min(manhattanDistance(food, pacPos) for food in foodList)
+    else:
+        minFood2PacDist = 0
+
+    # Score contribution for capsule positions
+    if capsulePositions:
+        minCap2PacDist = min(manhattanDistance(capsule, pacPos) for capsule in capsulePositions)
+    else:
+        minCap2PacDist = 0
+
+    # Score contribution for ghost positions
+    if ghostPositions:
+        minGhost2PacDist = min(manhattanDistance(ghostPos, pacPos) for ghostPos in ghostPositions)
+        if any(time > 0 for time in scaredTimes):    # if Pacman is in the ghost-eating state, go toward ghosts
+            minGhost2PacDist = -minGhost2PacDist
+    else:
+        minGhost2PacDist = 0
+
+    result = 0
+    if state.isWin():
+        result = 999999999
+    if state.isLose():
+        result = -999999999
+
+    # If food is significantly closer than ghost, prioritize moving 
+    # toward food rather than away from ghost
+    if minFood2PacDist < minGhost2PacDist * 1.5:
+        minFood2PacDist *= 1.7
+
+    # If capsule is significantly closer than ghost, prioritize moving 
+    # toward capsule rather than away from ghost
+    if minCap2PacDist < minGhost2PacDist * 1.5:
+        minCap2PacDist *= 1.7
+
+    # Closer to Food is GOOD (so subtract from score since closest food will have the least subtracted from it)
+    # Closer to Capsules is GOOD (so subtract from score since closest capsule will have the least subtracted from it)
+    # Closer to Ghost is BAD (so add to score since closest ghost will have the least added to it)
+    score += -minFood2PacDist - minCap2PacDist + minGhost2PacDist + result
+    return score
 
 # Abbreviation
 better = betterEvaluationFunction
