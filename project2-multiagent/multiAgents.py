@@ -155,7 +155,52 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+    
+        # Collect legal moves for Pacman
+        legalMoves = gameState.getLegalActions(0)
+
+        # Call expectimax function to generate scores of every successor and 
+        # return the score for the best expectimax path
+        scores = [
+            self.minmax(gameState.generateSuccessor(0, action), 1, 0) 
+            for action in legalMoves
+        ]
+        bestScore = max(scores)
+        bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+
+        return legalMoves[chosenIndex]
+
+    def minmax(self, state, agentIndex, depth):
+        # Base Case (reaching bottom of tree)
+        if (state.isWin() or state.isLose() or depth == self.depth):
+            return self.evaluationFunction(state)
+        
+        numAgents = state.getNumAgents()
+        legalMoves = state.getLegalActions(agentIndex)
+
+        # Base Case (when there are no legal moves)
+        if not legalMoves:
+            return self.evaluationFunction(state)
+    
+        # Pacman's Turn (Max Node)
+        if (agentIndex == 0):
+            return max(
+                self.minmax(state.generateSuccessor(agentIndex, action), 1, depth) 
+                for action in legalMoves)
+            
+        # Ghost's turn (Min Node)
+        else:
+            # Loop through all agents until a base case is reached
+            nextAgentIndex = (agentIndex + 1) % numAgents
+            # Only increase depth when Pacman is the next agent b/c the depth 
+            # can only increase once Pacman and all other ghosts have taken a turn
+            nextDepth = depth + 1 if nextAgentIndex == 0 else depth
+
+            # Recursively call minmax to find lowest score action out of ghost actions (safest bet for pacman)
+            return min(
+                self.minmax(state.generateSuccessor(agentIndex, action), nextAgentIndex, nextDepth) 
+                for action in legalMoves)
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
