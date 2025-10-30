@@ -212,7 +212,96 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        # Collect legal moves for Pacman
+        legalMoves = gameState.getLegalActions(0)
+
+        a = -float('inf')
+        b = float('inf')
+
+        # Call alphabeta function to generate scores of every successor and 
+        # return the score for the best alphabeta path
+        # scores = [
+        #     self.alphabeta(gameState.generateSuccessor(0, action), 1, 0, a, b) 
+        #     for action in legalMoves
+        # ]
+        bestAction = None
+        bestScore = -float('inf')
+        for action in legalMoves:
+            score = self.alphabeta(gameState.generateSuccessor(0, action), 1, 0, a, b) 
+            if score > bestScore:
+                bestScore = score 
+                bestAction = action
+            a = max(a, bestScore)
+
+        
+        # bestScore = max(scores)
+        # bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
+        # chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+
+        return bestAction
+    
+    def alphabeta(self, state, agentIndex, depth, a, b):
+        # Base Case (reaching bottom of tree)
+        if (state.isWin() or state.isLose() or depth == self.depth):
+            return self.evaluationFunction(state)
+           
+        numAgents = state.getNumAgents()
+        legalMoves = state.getLegalActions(agentIndex)
+
+        # Base Case (when there are no legal moves)
+        if not legalMoves:
+            return self.evaluationFunction(state)
+        
+        # v = float('inf')
+
+        # if(a > b):
+        #     return v
+
+        # Pacman's Turn (Max Node)
+        if (agentIndex == 0):
+            v = -float('inf')
+            # v = max(
+            #     self.alphabeta(state.generateSuccessor(agentIndex, action), 1, depth, a, b) 
+            #     for action in legalMoves)
+
+            # loop through legal actions checking their respective branches scores recursively
+            for action in legalMoves:
+                score = self.alphabeta(state.generateSuccessor(agentIndex, action), 1, depth, a, b)
+
+                # Updating the data with the new info
+                v = max(v, score)
+                a = max(a, v)
+                if(a > b):
+                    break
+                # prune case if value is greater than min 
+                if(v > b):
+                    break
+            return v
+            
+        # Ghost's turn (Min Nodes)
+        else:
+            v = float('inf')
+            # Loop through all agents until a base case is reached
+            nextAgentIndex = (agentIndex + 1) % numAgents
+            # Only increase depth when Pacman is the next agent b/c the depth 
+            # can only increase once Pacman and all other ghosts have taken a turn
+            nextDepth = depth + 1 if nextAgentIndex == 0 else depth
+
+            # v = min(
+            #     self.alphabeta(state.generateSuccessor(agentIndex, action), nextAgentIndex, nextDepth, a, b) 
+            #     for action in legalMoves)
+            
+            for action in legalMoves:
+                score = self.alphabeta(state.generateSuccessor(agentIndex, action), nextAgentIndex, nextDepth, a, b)
+                v = min(v, score)
+                b = min(b,v)
+                if(a > b):
+                    break
+                if(v < a):
+                    break
+
+            return v
 
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
