@@ -159,8 +159,8 @@ class MinimaxAgent(MultiAgentSearchAgent):
         # Collect legal moves for Pacman
         legalMoves = gameState.getLegalActions(0)
 
-        # Call expectimax function to generate scores of every successor and 
-        # return the score for the best expectimax path
+        # Call minmax function to generate scores of every successor and 
+        # return the score for the best minmax path
         scores = [
             self.minmax(gameState.generateSuccessor(0, action), 1, 0) 
             for action in legalMoves
@@ -216,28 +216,21 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         # Collect legal moves for Pacman
         legalMoves = gameState.getLegalActions(0)
 
+        # Initialize Alpha and Beta
         a = -float('inf')
         b = float('inf')
 
         # Call alphabeta function to generate scores of every successor and 
         # return the score for the best alphabeta path
-        # scores = [
-        #     self.alphabeta(gameState.generateSuccessor(0, action), 1, 0, a, b) 
-        #     for action in legalMoves
-        # ]
         bestAction = None
         bestScore = -float('inf')
+        # manual loop compared to other solutions to account for changes to alpha (maximizer node)
         for action in legalMoves:
             score = self.alphabeta(gameState.generateSuccessor(0, action), 1, 0, a, b) 
             if score > bestScore:
                 bestScore = score 
                 bestAction = action
             a = max(a, bestScore)
-
-        
-        # bestScore = max(scores)
-        # bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        # chosenIndex = random.choice(bestIndices) # Pick randomly among the best
 
         return bestAction
     
@@ -252,18 +245,10 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         # Base Case (when there are no legal moves)
         if not legalMoves:
             return self.evaluationFunction(state)
-        
-        # v = float('inf')
 
-        # if(a > b):
-        #     return v
-
-        # Pacman's Turn (Max Node)
+        # Pacman's Turn (Maximizer)
         if (agentIndex == 0):
             v = -float('inf')
-            # v = max(
-            #     self.alphabeta(state.generateSuccessor(agentIndex, action), 1, depth, a, b) 
-            #     for action in legalMoves)
 
             # loop through legal actions checking their respective branches scores recursively
             for action in legalMoves:
@@ -274,12 +259,12 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
                 a = max(a, v)
                 if(a > b):
                     break
-                # prune case if value is greater than min 
+                # prune case if value is greater than beta 
                 if(v > b):
                     break
             return v
             
-        # Ghost's turn (Min Nodes)
+        # Ghost's turn (Minimizer)
         else:
             v = float('inf')
             # Loop through all agents until a base case is reached
@@ -287,17 +272,18 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             # Only increase depth when Pacman is the next agent b/c the depth 
             # can only increase once Pacman and all other ghosts have taken a turn
             nextDepth = depth + 1 if nextAgentIndex == 0 else depth
-
-            # v = min(
-            #     self.alphabeta(state.generateSuccessor(agentIndex, action), nextAgentIndex, nextDepth, a, b) 
-            #     for action in legalMoves)
             
+            # Loop through all legal actions checking their respective branches scores recursively
             for action in legalMoves:
                 score = self.alphabeta(state.generateSuccessor(agentIndex, action), nextAgentIndex, nextDepth, a, b)
+
+                # Updating the data with the new info
                 v = min(v, score)
                 b = min(b,v)
                 if(a > b):
                     break
+                
+                # prune case if value is less than alpha 
                 if(v < a):
                     break
 
